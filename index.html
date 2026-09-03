@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Kasir Kue</title>
+<meta name="theme-color" content="#3F4650">
+<meta name="description" content="Aplikasi kasir untuk toko kue dan minuman">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Splash (intro) ===== -->
+  <section class="screen active" id="screen-splash">
+    <div class="splash-wrap">
+      <div class="splash-logo">🧁</div>
+      <h1 class="splash-title">Kasir Kue</h1>
+      <p class="splash-tagline">Aplikasi kasir gratis untuk usaha kue &amp; minuman kamu</p>
+      <button class="btn btn-primary" id="btnGoRegister" style="margin-top:32px;">Buat Akun</button>
+      <button class="btn btn-secondary" id="btnGoSignin" style="margin-top:10px;">Masuk</button>
+    </div>
+  </section>
+
+  <!-- ===== Daftar (register) ===== -->
+  <section class="screen" id="screen-register">
+    <div class="splash-wrap">
+      <h1 class="splash-title" style="font-size:22px;">Daftar</h1>
+      <p class="helper-text" style="text-align:center; margin-top:-2px;">Akun ini hanya berfungsi sebagai gerbang masuk aplikasi di HP ini — data toko tetap tersimpan lokal, tidak disinkronkan otomatis ke perangkat lain.</p>
+      <div class="field" style="text-align:left; margin-top:18px;"><label for="regName">Nama</label><input type="text" id="regName" placeholder="Nama kamu"></div>
+      <div class="field" style="text-align:left;"><label for="regEmail">Email</label><input type="email" id="regEmail" placeholder="nama@email.com"></div>
+      <div class="field" style="text-align:left;"><label for="regPassword">Password</label><input type="password" id="regPassword" placeholder="Minimal 6 karakter"></div>
+      <button class="btn btn-primary" id="btnRegisterSubmit">Buat Akun</button>
+      <p class="helper-text" style="text-align:center; margin-top:16px;">Atau daftar langsung lewat</p>
+      <button class="btn btn-secondary" id="btnGoogleRegister">🔍 Masuk dengan Google</button>
+      <p class="helper-text" style="text-align:center;">Sudah punya akun? <a href="#" id="linkGoToSignin">Masuk di sini</a></p>
+    </div>
+  </section>
+
+  <!-- ===== Masuk (sign in) ===== -->
+  <section class="screen" id="screen-signin">
+    <div class="splash-wrap">
+      <h1 class="splash-title" style="font-size:22px;">Masuk</h1>
+      <div class="field" style="text-align:left; margin-top:18px;"><label for="signinEmail">Email</label><input type="email" id="signinEmail" placeholder="nama@email.com"></div>
+      <div class="field" style="text-align:left;"><label for="signinPassword">Password</label><input type="password" id="signinPassword" placeholder="Password"></div>
+      <button class="btn btn-primary" id="btnSigninSubmit">Masuk</button>
+      <p class="helper-text" style="text-align:center; margin-top:16px;">Atau masuk lewat</p>
+      <button class="btn btn-secondary" id="btnGoogleSignin">🔍 Masuk dengan Google</button>
+      <p class="helper-text" style="text-align:center;">Belum punya akun? <a href="#" id="linkGoToRegister">Daftar di sini</a></p>
+    </div>
+  </section>
+
+  <!-- ===== Setup toko (first run after auth) ===== -->
+  <section class="screen" id="screen-storesetup">
+    <div class="splash-wrap">
+      <div class="splash-logo small">🧁</div>
+      <h1 class="splash-title" style="font-size:20px;">Satu langkah lagi</h1>
+      <p class="splash-tagline">Siapa nama toko kamu?</p>
+      <div class="field" style="margin-top:22px; text-align:left;">
+        <label for="splashStoreName">Nama toko kamu</label>
+        <input type="text" id="splashStoreName" placeholder="Contoh: Toko Kue Manis">
+      </div>
+      <button class="btn btn-primary" id="btnSplashStart">Lanjutkan</button>
+    </div>
+  </section>
+
+
+  <!-- ===== Login / pilih kasir ===== -->
+  <section class="screen" id="screen-login">
+    <div class="splash-wrap">
+      <div class="splash-logo small">🧁</div>
+      <h1 class="splash-title" id="loginStoreName" style="font-size:20px;">Toko Kue</h1>
+      <p class="splash-tagline">Masuk untuk mulai shift kasir</p>
+
+      <div id="kasirAvatarPicker" class="avatar-picker" style="display:none;"></div>
+
+      <div class="field" id="loginNameField" style="margin-top:22px; text-align:left;">
+        <label for="loginKasirName">Nama kasir</label>
+        <input type="text" id="loginKasirName" placeholder="Nama kamu">
+      </div>
+      <div class="field" style="text-align:left;">
+        <label for="loginStartCash">Kas awal (Rp)</label>
+        <input type="number" id="loginStartCash" min="0" placeholder="0">
+      </div>
+      <p class="helper-text" style="text-align:left;">Hitung uang tunai di laci kasir sebelum mulai berjualan.</p>
+      <button class="btn btn-primary" id="btnLoginStart">Mulai berjualan</button>
+      <button class="btn btn-secondary" id="btnLoginOther" style="margin-top:10px; display:none;">Gunakan nama lain</button>
+    </div>
+  </section>
+
+  <!-- ===== Main app shell ===== -->
+  <div class="app-shell" id="appShell">
+
+    <header class="topbar2">
+      <button class="icon-btn" id="btnHamburger" aria-label="Menu">☰</button>
+      <div class="topbar2-title">
+        <span id="screenTitle">KASIR</span>
+        <span class="topbar2-sub" id="screenSub"></span>
+      </div>
+      <button class="avatar-circle" id="btnAvatar">A</button>
+    </header>
+
+    <main id="screens">
+
+      <!-- ---- Kasir (Transaksi Penjualan) ---- -->
+      <section class="screen-body active" id="screen-kasir">
+        <div class="search-row">
+          <input type="text" id="searchInput" placeholder="Cari produk atau SKU...">
+          <button class="icon-btn" id="btnHeld" aria-label="Transaksi tertahan">🧾<span class="badge-count" id="heldCount" style="display:none;">0</span></button>
+        </div>
+        <div class="chip-row" id="categoryChips"></div>
+        <div class="product-list" id="productGrid"></div>
+      </section>
+
+      <!-- ---- Manajemen ---- -->
+      <section class="screen-body" id="screen-manajemen">
+        <div class="menu-list">
+          <button class="menu-row" id="rowBarangJasa">
+            <span class="menu-row-ico">📦</span>
+            <span class="menu-row-label">Barang atau jasa</span>
+            <span class="menu-row-arrow">›</span>
+          </button>
+          <button class="menu-row" id="rowKategori">
+            <span class="menu-row-ico">🗂️</span>
+            <span class="menu-row-label">Kategori barang</span>
+            <span class="menu-row-arrow">›</span>
+          </button>
+          <button class="menu-row" id="rowStok">
+            <span class="menu-row-ico">📉</span>
+            <span class="menu-row-label">Manajemen stok</span>
+            <span class="menu-row-arrow">›</span>
+          </button>
+          <button class="menu-row" id="rowKontak">
+            <span class="menu-row-ico">👥</span>
+            <span class="menu-row-label">Pelanggan dan Supplier</span>
+            <span class="menu-row-arrow">›</span>
+          </button>
+          <button class="menu-row" id="rowHutangPiutang">
+            <span class="menu-row-ico">📝</span>
+            <span class="menu-row-label">Hutang dan Piutang</span>
+            <span class="menu-row-arrow">›</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ---- Manajemen stok (stok opname) ---- -->
+      <section class="screen-body" id="screen-stok">
+        <p class="helper-text" style="margin-top:0;">Masukkan jumlah stok fisik hasil hitung manual. Selisih dengan stok sistem akan otomatis disesuaikan saat disimpan.</p>
+        <div id="stokOpnameList"></div>
+        <button class="btn btn-primary" id="btnSaveOpname" style="margin-top:14px;">Simpan hasil opname</button>
+      </section>
+
+      <!-- ---- Pelanggan dan Supplier ---- -->
+      <section class="screen-body" id="screen-kontak">
+        <button class="btn btn-primary" id="btnAddContact" style="margin-bottom:14px;">Tambah kontak</button>
+        <div class="seg" id="contactFilter" style="margin-bottom:14px;">
+          <button data-type="all" class="active">Semua</button>
+          <button data-type="pelanggan">Pelanggan</button>
+          <button data-type="supplier">Supplier</button>
+        </div>
+        <div id="contactList"></div>
+      </section>
+
+      <!-- ---- Hutang dan Piutang ---- -->
+      <section class="screen-body" id="screen-hutangpiutang">
+        <button class="btn btn-primary" id="btnAddDebt" style="margin-bottom:14px;">Tambah catatan</button>
+        <div id="debtList"></div>
+      </section>
+
+      <!-- ---- Pembelian dari Supplier ---- -->
+      <section class="screen-body" id="screen-pembelian">
+        <button class="btn btn-primary" id="btnAddPurchase" style="margin-bottom:14px;">Catat pembelian</button>
+        <div id="purchaseList"></div>
+      </section>
+
+      <!-- ---- Keuangan ---- -->
+      <section class="screen-body" id="screen-keuangan">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="st-label">Kas masuk</div><div class="st-value" id="statKasMasuk">Rp0</div></div>
+          <div class="stat-card"><div class="st-label">Kas keluar</div><div class="st-value" id="statKasKeluar">Rp0</div></div>
+        </div>
+        <div class="btn-pair" style="margin-bottom:14px;">
+          <button class="btn btn-primary" id="btnAddCashIn">+ Kas masuk</button>
+          <button class="btn btn-danger" id="btnAddCashOut">− Kas keluar</button>
+        </div>
+        <div id="cashLedgerList"></div>
+      </section>
+
+      <!-- ---- Absensi ---- -->
+      <section class="screen-body" id="screen-absensi">
+        <div class="panel">
+          <div class="field"><label for="absensiStaffSelect">Nama staf</label><select id="absensiStaffSelect"></select></div>
+          <button class="btn btn-primary" id="btnClockIn">Absen Masuk</button>
+          <button class="btn btn-secondary" id="btnClockOut" style="margin-top:10px;">Absen Pulang</button>
+        </div>
+        <p class="section-title">Riwayat absensi</p>
+        <div id="attendanceList"></div>
+      </section>
+
+      <!-- ---- Manajemen Staff ---- -->
+      <section class="screen-body" id="screen-staff">
+        <button class="btn btn-primary" id="btnAddStaff" style="margin-bottom:14px;">Tambah staf</button>
+        <div id="staffList"></div>
+      </section>
+
+      <!-- ---- Produk (Barang atau jasa) ---- -->
+      <section class="screen-body" id="screen-produk">
+        <button class="btn btn-primary" id="btnAddProduct" style="margin-bottom:14px;">Tambah produk</button>
+        <div id="productList"></div>
+      </section>
+
+      <!-- ---- Laporan ---- -->
+      <section class="screen-body" id="screen-laporan">
+
+        <!-- Laporan: menu accordion -->
+        <div id="laporanMenu">
+          <div class="accordion" data-acc="performa">
+            <button class="accordion-head">
+              <span class="menu-row-ico">📄</span><span class="menu-row-label">Performa Penjualan</span><span class="acc-caret">⌄</span>
+            </button>
+            <div class="accordion-body">
+              <button class="submenu-row" data-open="ringkasan">Ringkasan Penjualan</button>
+            </div>
+          </div>
+          <button class="menu-row" data-open="labarugi">
+            <span class="menu-row-ico">⚖️</span><span class="menu-row-label">Laporan Laba Rugi</span><span class="menu-row-arrow">›</span>
+          </button>
+          <div class="accordion" data-acc="penjualan">
+            <button class="accordion-head">
+              <span class="menu-row-ico">🧾</span><span class="menu-row-label">Laporan Penjualan</span><span class="acc-caret">⌄</span>
+            </button>
+            <div class="accordion-body">
+              <button class="submenu-row" data-open="transaksi">Transaksi</button>
+              <button class="submenu-row" data-open="byproduct">Penjualan Barang</button>
+              <button class="submenu-row" data-open="bycategory">Penjualan Kategori</button>
+              <button class="submenu-row" data-open="bypayment">Laporan Metode Pembayaran</button>
+            </div>
+          </div>
+          <button class="menu-row" data-open="shiftreport">
+            <span class="menu-row-ico">🕒</span><span class="menu-row-label">Riwayat Shift</span><span class="menu-row-arrow">›</span>
+          </button>
+        </div>
+
+        <!-- Laporan: detail pages -->
+        <div id="laporanDetail" style="display:none;">
+
+          <div class="seg" id="laporanRange" style="margin-bottom:14px;">
+            <button data-range="today" class="active">Hari ini</button>
+            <button data-range="week">7 hari</button>
+            <button data-range="month">30 hari</button>
+            <button data-range="all">Semua</button>
+          </div>
+
+          <div id="det-ringkasan" class="det-page">
+            <div class="stat-grid">
+              <div class="stat-card"><div class="st-label">Omzet</div><div class="st-value" id="statOmzet">Rp0</div></div>
+              <div class="stat-card"><div class="st-label">Transaksi</div><div class="st-value" id="statTrx">0</div></div>
+              <div class="stat-card"><div class="st-label">Produk terjual</div><div class="st-value" id="statQty">0</div></div>
+              <div class="stat-card"><div class="st-label">Laba kotor</div><div class="st-value" id="statProfit">Rp0</div></div>
+            </div>
+            <button class="btn btn-secondary" id="btnExportCsv" style="margin-bottom:16px;">Ekspor CSV</button>
+            <p class="section-title">Produk terlaris</p>
+            <div id="topProducts"></div>
+          </div>
+
+          <div id="det-labarugi" class="det-page" style="display:none;">
+            <div class="panel" id="labaRugiPanel"></div>
+          </div>
+
+          <div id="det-transaksi" class="det-page" style="display:none;">
+            <div id="trxHistory"></div>
+          </div>
+
+          <div id="det-byproduct" class="det-page" style="display:none;">
+            <div id="byProductFull"></div>
+          </div>
+
+          <div id="det-bycategory" class="det-page" style="display:none;">
+            <div id="byCategory"></div>
+          </div>
+
+          <div id="det-bypayment" class="det-page" style="display:none;">
+            <div id="byPayment"></div>
+          </div>
+
+          <div id="det-shiftreport" class="det-page" style="display:none;">
+            <div id="shiftHistory"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ---- Shift ---- -->
+      <section class="screen-body" id="screen-shift">
+        <p class="section-title">Shift aktif</p>
+        <div id="shiftPanel"></div>
+      </section>
+
+      <!-- ---- Pengaturan ---- -->
+      <section class="screen-body" id="screen-pengaturan">
+        <p class="mini-heading" style="margin-top:0;">Info toko</p>
+        <div class="field"><label for="setStoreName">Nama toko</label><input type="text" id="setStoreName"></div>
+        <div class="field"><label for="setAddress">Alamat (opsional)</label><input type="text" id="setAddress"></div>
+        <div class="field"><label for="setPhone">Telepon (opsional)</label><input type="text" id="setPhone"></div>
+
+        <p class="mini-heading">Struk & invoice</p>
+        <div class="field"><label for="setInvoicePrefix">Awalan nomor invoice</label><input type="text" id="setInvoicePrefix" placeholder="INV"></div>
+        <div class="field"><label for="setFooter">Catatan kaki struk</label><input type="text" id="setFooter" placeholder="Terima kasih!"></div>
+
+        <p class="mini-heading">Metode pembayaran aktif</p>
+        <div id="paymentMethodToggles" style="margin-bottom:16px;"></div>
+
+        <p class="mini-heading">Daftar nama kasir</p>
+        <div id="kasirListManage" style="margin-bottom:10px;"></div>
+        <div class="field-row">
+          <input type="text" id="newKasirName" placeholder="Nama kasir baru">
+          <button class="pill-btn" id="btnAddKasirName">Tambah</button>
+        </div>
+
+        <button class="menu-row" id="rowStaffFromSettings" style="margin-top:16px;">
+          <span class="menu-row-ico">🧑‍🤝‍🧑</span>
+          <span class="menu-row-label">Manajemen Staff</span>
+          <span class="menu-row-arrow">›</span>
+        </button>
+
+        <button class="btn btn-primary" id="btnSaveSettings" style="margin-top:16px;">Simpan pengaturan</button>
+
+        <div class="panel" style="margin-top:18px;">
+          <p class="lr-title" style="margin:0 0 6px;">Cadangkan data</p>
+          <p class="lr-sub" style="margin:0 0 12px;">Data tersimpan hanya di HP ini. Unduh cadangan secara rutin supaya data tidak hilang kalau aplikasi terhapus.</p>
+          <button class="btn btn-secondary" id="btnExportData">Unduh cadangan (.json)</button>
+          <button class="btn btn-secondary" id="btnImportData" style="margin-top:10px;">Pulihkan dari cadangan</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none;">
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Cart bar (kasir only) -->
+    <button class="cartbar" id="cartBar">
+      <span class="cb-left"><span id="cartCount">0 item</span><b id="cartTotal">Rp0</b></span>
+      <span class="cb-right">Lihat keranjang</span>
+    </button>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== Drawer ===== -->
+    <div class="drawer-backdrop" id="drawerBackdrop">
+      <div class="drawer">
+        <div class="drawer-header">
+          <div class="avatar-circle big" id="drawerAvatar">A</div>
+          <div>
+            <div class="drawer-name" id="drawerKasirName">Kasir</div>
+            <div class="drawer-role" id="drawerShiftInfo">Shift belum dibuka</div>
+          </div>
+        </div>
+        <nav class="drawer-menu">
+          <button class="drawer-item" data-goto="kasir"><span class="menu-row-ico">🧺</span>Transaksi Penjualan</button>
+          <button class="drawer-item" data-goto="manajemen"><span class="menu-row-ico">📦</span>Manajemen</button>
+          <button class="drawer-item" data-goto="pembelian"><span class="menu-row-ico">🚚</span>Pembelian dari Supplier</button>
+          <button class="drawer-item" data-goto="keuangan"><span class="menu-row-ico">💰</span>Keuangan</button>
+          <button class="drawer-item" data-goto="laporan"><span class="menu-row-ico">📊</span>Laporan</button>
+          <button class="drawer-item" data-goto="absensi"><span class="menu-row-ico">🕘</span>Absensi</button>
+          <button class="drawer-item" data-goto="shift"><span class="menu-row-ico">🕒</span>Shift</button>
+          <button class="drawer-item" data-goto="pengaturan"><span class="menu-row-ico">⚙️</span>Pengaturan</button>
+        </nav>
+        <div class="drawer-footer">
+          <button class="btn btn-secondary" id="btnLogout">Tutup shift &amp; keluar</button>
+          <button class="btn btn-secondary" id="btnSignOut" style="margin-top:8px;">Keluar akun</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SHEETS ============ -->
+
+    <div class="sheet-backdrop" id="sheetVariant">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title" id="variantSheetTitle">Pilih varian</p>
+        <div id="variantList"></div>
+        <button class="btn btn-secondary" id="btnCloseVariant" style="margin-top:12px;">Batal</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetHeld">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Transaksi tertahan</p>
+        <div id="heldList"></div>
+        <button class="btn btn-secondary" id="btnCloseHeld" style="margin-top:12px;">Tutup</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetCart">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Keranjang</p>
+        <div id="cartItems"></div>
+        <div class="totals-block">
+          <div class="field" style="margin-top:10px;">
+            <label for="discountInput">Diskon (Rp, opsional)</label>
+            <input type="number" id="discountInput" min="0" placeholder="0">
+          </div>
+          <div class="totals-row"><span>Subtotal</span><span id="sumSubtotal">Rp0</span></div>
+          <div class="totals-row"><span>Diskon</span><span id="sumDiscount">Rp0</span></div>
+          <div class="totals-row grand"><span>Total</span><span id="sumTotal">Rp0</span></div>
+        </div>
+        <button class="btn btn-primary" id="btnGoCheckout" style="margin-top:16px;">Lanjut bayar</button>
+        <button class="btn btn-secondary" id="btnHoldCart" style="margin-top:10px;">Tahan transaksi</button>
+        <button class="btn btn-secondary" id="btnCloseCart" style="margin-top:10px;">Tutup</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetPayment">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Pembayaran</p>
+        <div class="field">
+          <label>Metode bayar</label>
+          <div class="seg wrap" id="paymentMethod"></div>
+        </div>
+        <div class="field" id="cashFields">
+          <label for="cashPaid">Uang diterima</label>
+          <input type="number" id="cashPaid" min="0" placeholder="0">
+          <div class="quick-amounts" id="quickAmounts"></div>
+        </div>
+        <div class="totals-block">
+          <div class="totals-row grand"><span>Total tagihan</span><span id="payTotal">Rp0</span></div>
+          <div class="totals-row" id="changeRow"><span>Kembalian</span><span id="payChange">Rp0</span></div>
+        </div>
+        <button class="btn btn-primary" id="btnConfirmPay" style="margin-top:12px;">Selesaikan transaksi</button>
+        <button class="btn btn-secondary" id="btnBackToCart" style="margin-top:10px;">Kembali</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetReceipt">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Transaksi berhasil</p>
+        <div class="receipt" id="receiptText"></div>
+        <button class="btn btn-primary" id="btnPrintReceipt" style="margin-top:16px;">Cetak struk</button>
+        <button class="btn btn-secondary" id="btnShareReceipt" style="margin-top:10px;">Bagikan struk</button>
+        <button class="btn btn-secondary" id="btnNewTrx" style="margin-top:10px;">Transaksi baru</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetCategory">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Kelola kategori</p>
+        <div id="categoryList" style="margin-bottom:14px;"></div>
+        <div class="field">
+          <label for="newCatName">Kategori baru</label>
+          <input type="text" id="newCatName" placeholder="Contoh: Pastry">
+        </div>
+        <button class="btn btn-primary" id="btnAddCategory">Tambah kategori</button>
+        <button class="btn btn-secondary" id="btnCloseCategory" style="margin-top:10px;">Tutup</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetProduct">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title" id="productFormTitle">Tambah produk</p>
+        <input type="hidden" id="pfId">
+        <div class="field"><label for="pfName">Nama produk</label><input type="text" id="pfName" placeholder="Contoh: Cheesecake slice"></div>
+        <div class="field"><label for="pfSku">SKU (opsional)</label><input type="text" id="pfSku" placeholder="Contoh: CHS-01"></div>
+        <div class="field"><label for="pfCategorySelect">Kategori</label><select id="pfCategorySelect"></select></div>
+        <div class="field">
+          <label>Punya varian? (mis. ukuran/rasa beda harga)</label>
+          <div class="seg" id="pfHasVariants">
+            <button data-v="0" class="active">Tidak</button>
+            <button data-v="1">Ya</button>
+          </div>
+        </div>
+        <div id="pfSimpleFields">
+          <div class="field"><label for="pfPrice">Harga jual (Rp)</label><input type="number" id="pfPrice" min="0" placeholder="0"></div>
+          <div class="field"><label for="pfCost">Harga pokok / HPP (Rp, opsional)</label><input type="number" id="pfCost" min="0" placeholder="0"></div>
+          <div class="field">
+            <label>Pantau stok?</label>
+            <div class="seg" id="pfTrackStock">
+              <button data-track="1" class="active">Ya, hitung stok</button>
+              <button data-track="0">Tidak, selalu tersedia</button>
+            </div>
+          </div>
+          <div class="field" id="pfStockField"><label for="pfStock">Stok saat ini</label><input type="number" id="pfStock" min="0" placeholder="0"></div>
+          <div class="field" id="pfMinStockField"><label for="pfMinStock">Stok minimum (untuk peringatan)</label><input type="number" id="pfMinStock" min="0" placeholder="5"></div>
+        </div>
+        <div id="pfVariantFields" style="display:none;">
+          <label style="display:block; font-size:13px; font-weight:500; color:var(--cocoa-soft); margin-bottom:8px;">Daftar varian</label>
+          <div id="variantEditorList"></div>
+          <button class="btn btn-secondary" id="btnAddVariantRow" style="margin-bottom:14px;">+ Tambah varian</button>
+        </div>
+        <div class="field"><label for="pfUnit">Satuan (opsional)</label><input type="text" id="pfUnit" placeholder="pcs, cup, toples..."></div>
+        <button class="btn btn-primary" id="btnSaveProduct" style="margin-top:6px;">Simpan produk</button>
+        <button class="btn btn-danger" id="btnDeleteProduct" style="margin-top:10px; display:none;">Hapus produk</button>
+        <button class="btn btn-secondary" id="btnCloseProductForm" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetCloseShift">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Tutup shift</p>
+        <div class="panel" id="closeShiftSummary"></div>
+        <div class="field"><label for="csCash">Kas akhir aktual (Rp)</label><input type="number" id="csCash" min="0" placeholder="0"></div>
+        <p class="helper-text">Hitung uang tunai yang benar-benar ada di laci sekarang.</p>
+        <button class="btn btn-primary" id="btnConfirmCloseShift">Tutup shift</button>
+        <button class="btn btn-secondary" id="btnCancelCloseShift" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+    <!-- Contact (Pelanggan/Supplier) form -->
+    <div class="sheet-backdrop" id="sheetContact">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title" id="contactFormTitle">Tambah kontak</p>
+        <input type="hidden" id="cfId">
+        <div class="field"><label>Jenis</label>
+          <div class="seg" id="cfType"><button data-type="pelanggan" class="active">Pelanggan</button><button data-type="supplier">Supplier</button></div>
+        </div>
+        <div class="field"><label for="cfName">Nama</label><input type="text" id="cfName" placeholder="Nama pelanggan/supplier"></div>
+        <div class="field"><label for="cfPhone">Telepon (opsional)</label><input type="text" id="cfPhone" placeholder="08xxxxxxxxxx"></div>
+        <div class="field"><label for="cfAddress">Alamat (opsional)</label><input type="text" id="cfAddress"></div>
+        <button class="btn btn-primary" id="btnSaveContact">Simpan</button>
+        <button class="btn btn-danger" id="btnDeleteContact" style="margin-top:10px; display:none;">Hapus</button>
+        <button class="btn btn-secondary" id="btnCloseContact" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+    <!-- Debt (Hutang/Piutang) form -->
+    <div class="sheet-backdrop" id="sheetDebt">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Tambah catatan hutang/piutang</p>
+        <input type="hidden" id="dfId">
+        <div class="field"><label>Jenis</label>
+          <div class="seg" id="dfType"><button data-type="hutang" class="active">Hutang toko</button><button data-type="piutang">Piutang toko</button></div>
+        </div>
+        <div class="field"><label for="dfName">Nama pihak terkait</label><input type="text" id="dfName" placeholder="Nama orang/supplier"></div>
+        <div class="field"><label for="dfAmount">Jumlah (Rp)</label><input type="number" id="dfAmount" min="0" placeholder="0"></div>
+        <div class="field"><label for="dfDue">Jatuh tempo (opsional)</label><input type="date" id="dfDue"></div>
+        <div class="field"><label for="dfNote">Catatan (opsional)</label><input type="text" id="dfNote"></div>
+        <button class="btn btn-primary" id="btnSaveDebt">Simpan</button>
+        <button class="btn btn-secondary" id="btnCloseDebt" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+    <!-- Pembelian dari Supplier form -->
+    <div class="sheet-backdrop" id="sheetPurchase">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title">Catat pembelian</p>
+        <div class="field"><label for="pfSupplierSelect">Supplier</label><select id="pfSupplierSelect"></select></div>
+        <div class="field"><label for="pfProductSelect">Produk</label><select id="pfProductSelect"></select></div>
+        <div class="field"><label for="pfPurchaseQty">Jumlah</label><input type="number" id="pfPurchaseQty" min="1" placeholder="0"></div>
+        <div class="field"><label for="pfPurchaseTotal">Total harga beli (Rp)</label><input type="number" id="pfPurchaseTotal" min="0" placeholder="0"></div>
+        <p class="helper-text">Stok produk akan otomatis bertambah sesuai jumlah yang dicatat.</p>
+        <button class="btn btn-primary" id="btnSavePurchase">Simpan pembelian</button>
+        <button class="btn btn-secondary" id="btnClosePurchase" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+    <!-- Cash ledger entry form -->
+    <div class="sheet-backdrop" id="sheetCashEntry">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title" id="cashEntryTitle">Kas masuk</p>
+        <input type="hidden" id="ceType">
+        <div class="field"><label for="ceAmount">Jumlah (Rp)</label><input type="number" id="ceAmount" min="0" placeholder="0"></div>
+        <div class="field"><label for="ceNote">Keterangan</label><input type="text" id="ceNote" placeholder="Contoh: Modal tambahan, bayar listrik"></div>
+        <button class="btn btn-primary" id="btnSaveCashEntry">Simpan</button>
+        <button class="btn btn-secondary" id="btnCloseCashEntry" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+    <!-- Staff form -->
+    <div class="sheet-backdrop" id="sheetStaff">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <p class="sheet-title" id="staffFormTitle">Tambah staf</p>
+        <input type="hidden" id="sfId">
+        <div class="field"><label for="sfName">Nama</label><input type="text" id="sfName" placeholder="Nama staf"></div>
+        <div class="field"><label>Peran</label>
+          <div class="seg" id="sfRole"><button data-role="Kasir" class="active">Kasir</button><button data-role="Owner">Owner</button></div>
+        </div>
+        <button class="btn btn-primary" id="btnSaveStaff">Simpan</button>
+        <button class="btn btn-danger" id="btnDeleteStaff" style="margin-top:10px; display:none;">Hapus</button>
+        <button class="btn btn-secondary" id="btnCloseStaff" style="margin-top:10px;">Batal</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="print-area" style="display:none;"></div>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
