@@ -23,12 +23,49 @@ const firebaseConfig = {
 };
 
 let firebaseReady = false;
-try {
-  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw') {
-    firebase.initializeApp(firebaseConfig);
-    firebaseReady = true;
+let firebaseCheckDone = false;
+
+function tryInitFirebase() {
+  if (firebaseReady) return true;
+  try {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw') {
+      if (!firebase.apps || firebase.apps.length === 0) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      firebaseReady = true;
+    }
+  } catch (e) {
+    console.error('Firebase init error', e);
+    firebaseReady = false;
   }
-} catch (e) {
-  console.error('Firebase init error', e);
-  firebaseReady = false;
+  return firebaseReady;
 }
+
+function markFirebaseCheckDone() {
+  if (firebaseCheckDone) return;
+  firebaseCheckDone = true;
+  window.dispatchEvent(new Event('firebase-check-done'));
+}
+
+// Coba langsung dulu.
+tryInitFirebase();
+
+// Kalau SDK-nya belum siap saat ini (skrip eksternal kadang butuh waktu
+// lebih lama dimuat), coba lagi beberapa kali sebelum benar-benar menyerah.
+// Ini mengatasi kondisi race saat firebase-app-compat.js/firebase-auth-compat.js
+// belum sepenuhnya siap tepat di baris ini dieksekusi.
+let retries = 0;
+const retryTimer = setInterval(() => {
+  retries++;
+  if (tryInitFirebase() || retries >= 20) {
+    clearInterval(retryTimer);
+    markFirebaseCheckDone();
+  }
+}, 150);
+
+// Jaring pengaman terakhir: begitu seluruh halaman (termasuk semua skrip
+// eksternal) selesai dimuat, pastikan kita sudah menandai selesai.
+window.addEventListener('load', () => {
+  tryInitFirebase();
+  markFirebaseCheckDone();
+});
