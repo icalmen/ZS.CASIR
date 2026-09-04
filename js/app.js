@@ -704,7 +704,11 @@ function init() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-init();
+if (typeof firebaseCheckDone !== 'undefined' && firebaseCheckDone) {
+  init();
+} else {
+  window.addEventListener('firebase-check-done', init, { once: true });
+}
 
 /* ==========================================================================
    v4 additions — Firebase auth + new Manajemen sub-modules
