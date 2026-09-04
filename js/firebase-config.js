@@ -14,17 +14,17 @@
    ========================================================================== */
 
 const firebaseConfig = {
-  apiKey: "GANTI_DENGAN_API_KEY_KAMU",
-  authDomain: "GANTI_DENGAN_PROJECT_ID.firebaseapp.com",
-  projectId: "GANTI_DENGAN_PROJECT_ID",
-  storageBucket: "GANTI_DENGAN_PROJECT_ID.appspot.com",
-  messagingSenderId: "GANTI_DENGAN_SENDER_ID",
-  appId: "GANTI_DENGAN_APP_ID",
+  apiKey: "AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw",
+  authDomain: "zs-kasir.firebaseapp.com",
+  projectId: "zs-kasir",
+  storageBucket: "zs-kasir.firebasestorage.app",
+  messagingSenderId: "759164008424",
+  appId: "1:759164008424:web:a7a3c6f777d4d9d1a9565d",
 };
 
 let firebaseReady = false;
 try {
-  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'GANTI_DENGAN_API_KEY_KAMU') {
+  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw') {
     firebase.initializeApp(firebaseConfig);
     firebaseReady = true;
   }
