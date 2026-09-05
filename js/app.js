@@ -693,25 +693,15 @@ el('importFile').addEventListener('change', (e) => {
 
 function init() {
   seedDefaultsIfEmpty();
-  if (firebaseReady) {
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) proceedAfterAuth();
-      else showLevel('splash');
-    });
-  } else {
-    showLevel('splash');
-  }
+  if (getAuthSession()) proceedAfterAuth();
+  else showLevel('splash');
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-if (typeof firebaseCheckDone !== 'undefined' && firebaseCheckDone) {
-  init();
-} else {
-  window.addEventListener('firebase-check-done', init, { once: true });
-}
+init();
 
 /* ==========================================================================
-   v4 additions — Firebase auth + new Manajemen sub-modules
+   v4 additions — Firebase auth (REST API) + new Manajemen sub-modules
    ========================================================================== */
 
 /* ---------------- Auth navigation ---------------- */
@@ -729,53 +719,54 @@ el('linkGoToSignin').addEventListener('click', (e) => { e.preventDefault(); show
 el('linkGoToRegister').addEventListener('click', (e) => { e.preventDefault(); showLevel('register'); });
 
 function firebaseNotReadyToast() {
-  showToast('Firebase belum dikonfigurasi — isi js/firebase-config.js dengan project kamu sendiri.');
+  showToast('Firebase belum dikonfigurasi — isi js/firebase-config.js dengan apiKey project kamu sendiri.');
 }
 
-function withFirebaseReady(action) {
-  if (firebaseReady) { action(); return; }
-  const config = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : null;
-  if (!config || config.apiKey === 'GANTI_DENGAN_API_KEY_KAMU') { firebaseNotReadyToast(); return; }
-  showToast('Menghubungkan ke server, tunggu sebentar...');
-  tryInitFirebase();
-  setTimeout(() => {
-    if (firebaseReady) { action(); return; }
-    showToast('Gagal terhubung ke server. Periksa koneksi internet kamu, lalu coba lagi.');
-  }, 4000);
+function setButtonBusy(btn, busy, busyText) {
+  if (busy) { btn.dataset.originalText = btn.textContent; btn.textContent = busyText; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.originalText || btn.textContent; btn.disabled = false; }
 }
 
-el('btnRegisterSubmit').addEventListener('click', () => {
+el('btnRegisterSubmit').addEventListener('click', async () => {
   const name = el('regName').value.trim();
   const email = el('regEmail').value.trim();
   const password = el('regPassword').value;
   if (!name || !email || !password) { showToast('Lengkapi semua kolom'); return; }
   if (password.length < 6) { showToast('Password minimal 6 karakter'); return; }
-  withFirebaseReady(() => {
-    firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then(cred => cred.user.updateProfile({ displayName: name }))
-      .then(proceedAfterAuth)
-      .catch(err => showToast(err.message));
-  });
+  if (!firebaseReady) { firebaseNotReadyToast(); return; }
+  const btn = el('btnRegisterSubmit');
+  setButtonBusy(btn, true, 'Memproses...');
+  try {
+    const user = await firebaseSignUp(email, password, name);
+    saveAuthSession(user);
+    proceedAfterAuth();
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    setButtonBusy(btn, false);
+  }
 });
 
-el('btnSigninSubmit').addEventListener('click', () => {
+el('btnSigninSubmit').addEventListener('click', async () => {
   const email = el('signinEmail').value.trim();
   const password = el('signinPassword').value;
   if (!email || !password) { showToast('Isi email dan password'); return; }
-  withFirebaseReady(() => {
-    firebase.auth().signInWithEmailAndPassword(email, password)
-      .then(proceedAfterAuth)
-      .catch(err => showToast(err.message));
-  });
+  if (!firebaseReady) { firebaseNotReadyToast(); return; }
+  const btn = el('btnSigninSubmit');
+  setButtonBusy(btn, true, 'Memproses...');
+  try {
+    const user = await firebaseSignIn(email, password);
+    saveAuthSession(user);
+    proceedAfterAuth();
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    setButtonBusy(btn, false);
+  }
 });
 
 function googleSignIn() {
-  withFirebaseReady(() => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then(proceedAfterAuth)
-      .catch(err => showToast(err.message));
-  });
+  showToast('Masuk dengan Google belum tersedia di jaringan ini — silakan pakai Daftar/Masuk dengan email.');
 }
 el('btnGoogleRegister').addEventListener('click', googleSignIn);
 el('btnGoogleSignin').addEventListener('click', googleSignIn);
@@ -783,8 +774,8 @@ el('btnGoogleSignin').addEventListener('click', googleSignIn);
 el('btnSignOut').addEventListener('click', () => {
   closeDrawer();
   if (!confirm('Keluar dari akun ini?')) return;
-  if (firebaseReady) firebase.auth().signOut().then(() => showLevel('splash'));
-  else showLevel('splash');
+  clearAuthSession();
+  showLevel('splash');
 });
 
 /* ---------------- Manajemen: extra rows ---------------- */
