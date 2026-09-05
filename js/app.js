@@ -732,35 +732,50 @@ function firebaseNotReadyToast() {
   showToast('Firebase belum dikonfigurasi — isi js/firebase-config.js dengan project kamu sendiri.');
 }
 
+function withFirebaseReady(action) {
+  if (firebaseReady) { action(); return; }
+  const config = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : null;
+  if (!config || config.apiKey === 'GANTI_DENGAN_API_KEY_KAMU') { firebaseNotReadyToast(); return; }
+  showToast('Menghubungkan ke server, tunggu sebentar...');
+  tryInitFirebase();
+  setTimeout(() => {
+    if (firebaseReady) { action(); return; }
+    showToast('Gagal terhubung ke server. Periksa koneksi internet kamu, lalu coba lagi.');
+  }, 4000);
+}
+
 el('btnRegisterSubmit').addEventListener('click', () => {
   const name = el('regName').value.trim();
   const email = el('regEmail').value.trim();
   const password = el('regPassword').value;
   if (!name || !email || !password) { showToast('Lengkapi semua kolom'); return; }
   if (password.length < 6) { showToast('Password minimal 6 karakter'); return; }
-  if (!firebaseReady) { firebaseNotReadyToast(); return; }
-  firebase.auth().createUserWithEmailAndPassword(email, password)
-    .then(cred => cred.user.updateProfile({ displayName: name }))
-    .then(proceedAfterAuth)
-    .catch(err => showToast(err.message));
+  withFirebaseReady(() => {
+    firebase.auth().createUserWithEmailAndPassword(email, password)
+      .then(cred => cred.user.updateProfile({ displayName: name }))
+      .then(proceedAfterAuth)
+      .catch(err => showToast(err.message));
+  });
 });
 
 el('btnSigninSubmit').addEventListener('click', () => {
   const email = el('signinEmail').value.trim();
   const password = el('signinPassword').value;
   if (!email || !password) { showToast('Isi email dan password'); return; }
-  if (!firebaseReady) { firebaseNotReadyToast(); return; }
-  firebase.auth().signInWithEmailAndPassword(email, password)
-    .then(proceedAfterAuth)
-    .catch(err => showToast(err.message));
+  withFirebaseReady(() => {
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(proceedAfterAuth)
+      .catch(err => showToast(err.message));
+  });
 });
 
 function googleSignIn() {
-  if (!firebaseReady) { firebaseNotReadyToast(); return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider)
-    .then(proceedAfterAuth)
-    .catch(err => showToast(err.message));
+  withFirebaseReady(() => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+      .then(proceedAfterAuth)
+      .catch(err => showToast(err.message));
+  });
 }
 el('btnGoogleRegister').addEventListener('click', googleSignIn);
 el('btnGoogleSignin').addEventListener('click', googleSignIn);
