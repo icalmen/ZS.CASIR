@@ -14,12 +14,12 @@
    ========================================================================== */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw",
-  authDomain: "zs-kasir.firebaseapp.com",
-  projectId: "zs-kasir",
-  storageBucket: "zs-kasir.firebasestorage.app",
-  messagingSenderId: "759164008424",
-  appId: "1:759164008424:web:a7a3c6f777d4d9d1a9565d",
+  apiKey: "GANTI_DENGAN_API_KEY_KAMU",
+  authDomain: "GANTI_DENGAN_PROJECT_ID.firebaseapp.com",
+  projectId: "GANTI_DENGAN_PROJECT_ID",
+  storageBucket: "GANTI_DENGAN_PROJECT_ID.appspot.com",
+  messagingSenderId: "GANTI_DENGAN_SENDER_ID",
+  appId: "GANTI_DENGAN_APP_ID",
 };
 
 let firebaseReady = false;
@@ -28,7 +28,7 @@ let firebaseCheckDone = false;
 function tryInitFirebase() {
   if (firebaseReady) return true;
   try {
-    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw') {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'GANTI_DENGAN_API_KEY_KAMU') {
       if (!firebase.apps || firebase.apps.length === 0) {
         firebase.initializeApp(firebaseConfig);
       }
@@ -50,22 +50,21 @@ function markFirebaseCheckDone() {
 // Coba langsung dulu.
 tryInitFirebase();
 
-// Kalau SDK-nya belum siap saat ini (skrip eksternal kadang butuh waktu
-// lebih lama dimuat), coba lagi beberapa kali sebelum benar-benar menyerah.
-// Ini mengatasi kondisi race saat firebase-app-compat.js/firebase-auth-compat.js
-// belum sepenuhnya siap tepat di baris ini dieksekusi.
+// Kalau SDK-nya belum siap saat ini (jaringan lambat atau resource
+// eksternal butuh waktu lebih lama), terus coba ulang sampai 25 detik
+// sebelum benar-benar menyerah.
 let retries = 0;
+const MAX_RETRIES = 165; // ~25 detik (150ms x 165)
 const retryTimer = setInterval(() => {
   retries++;
-  if (tryInitFirebase() || retries >= 20) {
+  if (tryInitFirebase() || retries >= MAX_RETRIES) {
     clearInterval(retryTimer);
     markFirebaseCheckDone();
   }
 }, 150);
 
-// Jaring pengaman terakhir: begitu seluruh halaman (termasuk semua skrip
-// eksternal) selesai dimuat, pastikan kita sudah menandai selesai.
+// Jaring pengaman terakhir: begitu seluruh halaman selesai dimuat.
 window.addEventListener('load', () => {
   tryInitFirebase();
-  markFirebaseCheckDone();
+  if (retries >= MAX_RETRIES || firebaseReady) markFirebaseCheckDone();
 });
