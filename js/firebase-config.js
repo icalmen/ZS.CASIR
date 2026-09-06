@@ -22,7 +22,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw",
 };
 
-const firebaseReady = firebaseConfig.apiKey !== 'AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw';
+const firebaseReady = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('GANTI_DENGAN_');
 const firebaseCheckDone = true; // tidak perlu menunggu skrip eksternal lagi
 
 const IDENTITY_TOOLKIT_BASE = 'https://identitytoolkit.googleapis.com/v1';
