@@ -1,4 +1,4 @@
-# Kasir Kue
+# zs.bakehouse kasir
 
 Aplikasi kasir sederhana untuk toko kue & minuman. Berjalan langsung di browser
 sebagai PWA (Progressive Web App), lalu bisa dibungkus jadi file APK Android
