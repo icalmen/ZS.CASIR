@@ -379,9 +379,50 @@ el('rowKategori').addEventListener('click', () => { renderCategoryManageList(); 
 
 /* ---------------- Produk ---------------- */
 
+function renderImagePreview(dataUrl) {
+  el('pfImagePreview').innerHTML = dataUrl ? `<img class="img-preview" src="${dataUrl}" alt="">` : '';
+}
+
+function resizeImageFile(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+        else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+el('pfImage').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const dataUrl = await resizeImageFile(file, 300);
+    state.editingImageData = dataUrl;
+    renderImagePreview(dataUrl);
+  } catch (err) {
+    showToast('Gagal memuat foto');
+  }
+});
+
 function fillProductForm(product) {
   state.editingProductId = product ? product.id : null;
   state.editingVariants = product && product.hasVariants ? JSON.parse(JSON.stringify(product.variants)) : [];
+  state.editingImageData = product ? (product.imageData || null) : null;
+  el('pfImage').value = '';
+  renderImagePreview(state.editingImageData);
   el('productFormTitle').textContent = product ? 'Edit produk' : 'Tambah produk';
   el('pfId').value = product ? product.id : '';
   el('pfName').value = product ? product.name : '';
@@ -444,7 +485,7 @@ el('pfTrackStock').addEventListener('click', (e) => {
 
 el('btnAddVariantRow').addEventListener('click', () => { state.editingVariants.push({ name: '', price: '', stock: '' }); renderVariantEditor(state.editingVariants); });
 el('variantEditorList').addEventListener('input', (e) => {
-  const row = e.target.closest('.variant-row');
+  const row = e.target.closest('.variant-row-block');
   if (!row) return;
   const idx = Number(row.dataset.idx);
   const field = e.target.dataset.field;
@@ -468,7 +509,7 @@ el('btnSaveProduct').addEventListener('click', () => {
   const sku = el('pfSku').value.trim();
   const unit = el('pfUnit').value.trim();
   const hasVariants = document.querySelector('#pfHasVariants button.active').dataset.v === '1';
-  let product = { id: state.editingProductId || null, name, sku, categoryId, unit, hasVariants, isActive: true };
+  let product = { id: state.editingProductId || null, name, sku, categoryId, unit, hasVariants, isActive: true, imageData: state.editingImageData || null };
   if (hasVariants) {
     const cleanVariants = state.editingVariants
       .filter(v => v.name && v.name.trim() && Number(v.price) > 0)

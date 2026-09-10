@@ -150,7 +150,9 @@ function renderProductGrid(category, cart, query) {
     return `
       <button class="product-list-row ${outOfStock ? 'disabled' : ''}" data-id="${p.id}" ${outOfStock ? 'disabled' : ''}>
         ${qtyInCart > 0 ? `<span class="pl-qty-badge">${qtyInCart}</span>` : ''}
-        <span class="pl-thumb ${isMinuman ? 'minuman' : ''}">${initials(p.name)}</span>
+        ${p.imageData
+          ? `<img class="pl-thumb-img" src="${p.imageData}" alt="">`
+          : `<span class="pl-thumb ${isMinuman ? 'minuman' : ''}">${initials(p.name)}</span>`}
         <span class="pl-info">
           <span class="pl-name">${escapeHtml(p.name)}</span>
           <span class="pl-meta ${lowStock || outOfStock ? 'low' : ''}">${metaLabel}</span>
@@ -325,11 +327,16 @@ function renderCategoryManageList() {
 function renderVariantEditor(variants) {
   const wrap = el('variantEditorList');
   wrap.innerHTML = variants.map((v, i) => `
-    <div class="variant-row" data-idx="${i}">
-      <input class="vr-name" type="text" placeholder="Nama (mis. 15 cm)" value="${escapeHtml(v.name || '')}" data-field="name">
-      <input class="vr-price" type="number" placeholder="Harga" value="${v.price || ''}" data-field="price">
-      <input class="vr-stock" type="number" placeholder="Stok" value="${v.stock || ''}" data-field="stock">
-      <button data-act="del-variant" data-idx="${i}">×</button>
+    <div class="variant-row-block" data-idx="${i}">
+      <div class="variant-row-top">
+        <input class="vr-name" type="text" placeholder="Nama varian (mis. 15 cm)" value="${escapeHtml(v.name || '')}" data-field="name">
+        <button data-act="del-variant" data-idx="${i}">×</button>
+      </div>
+      <div class="variant-row-bottom">
+        <input class="vr-price" type="number" placeholder="Harga jual" value="${v.price || ''}" data-field="price">
+        <input class="vr-cost" type="number" placeholder="Harga pokok" value="${v.costPrice || ''}" data-field="costPrice">
+        <input class="vr-stock" type="number" placeholder="Stok" value="${v.stock || ''}" data-field="stock">
+      </div>
     </div>`).join('');
 }
 
@@ -420,6 +427,8 @@ function renderRingkasan(data) {
     ? `<div class="empty-state">Belum ada penjualan pada rentang ini.</div>`
     : top.map(([name, d]) => `
       <div class="list-row"><div class="lr-main"><div class="lr-title">${escapeHtml(name)}</div><div class="lr-sub">${d.qty} terjual</div></div><div class="lr-value">${formatRupiah(d.revenue)}</div></div>`).join('');
+
+  renderTrendChart('trendChart', buildTrendSeries(typeof state !== 'undefined' ? state.laporanRange : 'today', data.trx));
 }
 
 function renderLabaRugi(data) {
@@ -479,6 +488,7 @@ function renderByCategory(data) {
   el('byCategory').innerHTML = entries.length === 0
     ? `<div class="empty-state">Belum ada data.</div>`
     : entries.map(([name, val]) => `<div class="list-row"><div class="lr-main"><div class="lr-title">${escapeHtml(name)}</div></div><div class="lr-value">${formatRupiah(val)}</div></div>`).join('');
+  renderDonutChart('categoryChart', entries.map(([label, value]) => ({ label, value })));
 }
 
 function renderByPayment(data) {
@@ -488,6 +498,7 @@ function renderByPayment(data) {
   el('byPayment').innerHTML = entries.length === 0
     ? `<div class="empty-state">Belum ada data.</div>`
     : entries.map(([name, val]) => `<div class="list-row"><div class="lr-main"><div class="lr-title">${escapeHtml(name)}</div></div><div class="lr-value">${formatRupiah(val)}</div></div>`).join('');
+  renderBarChartHorizontal('paymentChart', entries.map(([label, value]) => ({ label, value })));
 }
 
 function exportCsv(range) {
@@ -681,4 +692,119 @@ function renderStaffList() {
       <div class="lr-main"><div class="lr-title">${escapeHtml(s.name)}</div><div class="lr-sub">${escapeHtml(s.role)}</div></div>
       <span class="menu-row-arrow">›</span>
     </div>`).join('');
+}
+
+/* ==========================================================================
+   v5 additions — SVG charts (no external library)
+   ========================================================================== */
+
+const CHART_PALETTE = ['#3F4650', '#8A929E', '#B08A3E', '#5B7B9A', '#B5544A', '#6B8F71', '#8E6BA8', '#C9A66B'];
+
+function chartNumberFormat(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt';
+  if (n >= 1000) return (n / 1000).toFixed(0) + 'rb';
+  return String(Math.round(n));
+}
+
+function renderTrendChart(containerId, series) {
+  const el2 = el(containerId);
+  if (!series || series.length === 0 || series.every(s => s.value === 0)) {
+    el2.innerHTML = `<div class="empty-state">Belum ada data untuk ditampilkan.</div>`;
+    return;
+  }
+  const W = 320, H = 140, padL = 34, padR = 12, padT = 14, padB = 22;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const max = Math.max(...series.map(s => s.value), 1);
+  const n = series.length;
+  const stepX = n > 1 ? innerW / (n - 1) : 0;
+  const pts = series.map((s, i) => {
+    const x = padL + stepX * i;
+    const y = padT + innerH - (s.value / max) * innerH;
+    return { x, y, ...s };
+  });
+  const linePath = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const areaPath = linePath + ` L${pts[pts.length - 1].x.toFixed(1)},${(padT + innerH).toFixed(1)} L${pts[0].x.toFixed(1)},${(padT + innerH).toFixed(1)} Z`;
+
+  const labelEvery = Math.max(1, Math.ceil(n / 5));
+  const labels = pts.map((p, i) => (i % labelEvery === 0 || i === n - 1)
+    ? `<text x="${p.x.toFixed(1)}" y="${H - 4}" font-size="9" fill="#9AA1AB" text-anchor="middle">${escapeHtml(p.label)}</text>` : '').join('');
+
+  const dots = n <= 14 ? pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.6" fill="#3F4650" />`).join('') : '';
+
+  el2.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="150" preserveAspectRatio="xMidYMid meet">
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="#E3E5E8" stroke-width="1"/>
+      <line x1="${padL}" y1="${padT + innerH}" x2="${W - padR}" y2="${padT + innerH}" stroke="#E3E5E8" stroke-width="1"/>
+      <text x="${padL - 4}" y="${padT + 4}" font-size="9" fill="#9AA1AB" text-anchor="end">${chartNumberFormat(max)}</text>
+      <text x="${padL - 4}" y="${padT + innerH}" font-size="9" fill="#9AA1AB" text-anchor="end">0</text>
+      <path d="${areaPath}" fill="#3F4650" opacity="0.10"/>
+      <path d="${linePath}" fill="none" stroke="#3F4650" stroke-width="2"/>
+      ${dots}
+      ${labels}
+    </svg>`;
+}
+
+function renderDonutChart(containerId, data) {
+  const el2 = el(containerId);
+  if (!data || data.length === 0) { el2.innerHTML = `<div class="empty-state">Belum ada data.</div>`; return; }
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total <= 0) { el2.innerHTML = `<div class="empty-state">Belum ada data.</div>`; return; }
+  const size = 140, r = 52, cx = size / 2, cy = size / 2, circumference = 2 * Math.PI * r;
+  let offsetAcc = 0;
+  const segments = data.slice(0, 8).map((d, i) => {
+    const frac = d.value / total;
+    const dash = frac * circumference;
+    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${CHART_PALETTE[i % CHART_PALETTE.length]}"
+      stroke-width="20" stroke-dasharray="${dash.toFixed(2)} ${(circumference - dash).toFixed(2)}"
+      stroke-dashoffset="${(-offsetAcc).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})" />`;
+    offsetAcc += dash;
+    return seg;
+  }).join('');
+
+  const legend = data.slice(0, 8).map((d, i) => `
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}"></span>
+      <span class="legend-label">${escapeHtml(d.label)}</span>
+      <span class="legend-value">${((d.value / total) * 100).toFixed(0)}%</span>
+    </div>`).join('');
+
+  el2.innerHTML = `
+    <div class="donut-wrap">
+      <svg viewBox="0 0 ${size} ${size}" width="140" height="140">${segments}</svg>
+      <div class="legend-list">${legend}</div>
+    </div>`;
+}
+
+function renderBarChartHorizontal(containerId, data) {
+  const el2 = el(containerId);
+  if (!data || data.length === 0) { el2.innerHTML = `<div class="empty-state">Belum ada data.</div>`; return; }
+  const max = Math.max(...data.map(d => d.value), 1);
+  el2.innerHTML = data.slice(0, 8).map((d, i) => `
+    <div class="hbar-row">
+      <span class="hbar-label">${escapeHtml(d.label)}</span>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${Math.max(4, (d.value / max) * 100)}%; background:${CHART_PALETTE[i % CHART_PALETTE.length]};"></div></div>
+      <span class="hbar-value">${chartNumberFormat(d.value)}</span>
+    </div>`).join('');
+}
+
+function buildTrendSeries(range, trx) {
+  const now = new Date();
+  if (range === 'today') {
+    const buckets = Array.from({ length: 24 }, (_, h) => ({ label: h % 3 === 0 ? h + 'j' : '', value: 0, hour: h }));
+    trx.forEach(t => { const h = new Date(t.timestamp).getHours(); buckets[h].value += t.total; });
+    return buckets;
+  }
+  const days = range === 'week' ? 7 : range === 'month' ? 30 : Math.min(30, Math.max(7, Math.ceil((now - new Date(Math.min(...trx.map(t => t.timestamp), now.getTime()))) / 86400000) || 7));
+  const buckets = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    buckets.push({ label: d.getDate() + '/' + (d.getMonth() + 1), value: 0, ts: d.getTime() });
+  }
+  trx.forEach(t => {
+    const d = new Date(t.timestamp);
+    const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const bucket = buckets.find(b => b.ts === key);
+    if (bucket) bucket.value += t.total;
+  });
+  return buckets;
 }

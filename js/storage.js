@@ -83,7 +83,7 @@ function seedDefaultsIfEmpty() {
   Storage.set(DB_KEYS.shifts, []);
   Storage.set(DB_KEYS.auditLog, []);
   Storage.set(DB_KEYS.settings, {
-    storeName: 'Toko Kue',
+    storeName: 'ZS.Bakehouse',
     address: '',
     phone: '',
     invoicePrefix: 'INV',
@@ -156,7 +156,7 @@ const ProductStore = {
 const SettingsStore = {
   get() {
     return Storage.get(DB_KEYS.settings, {
-      storeName: 'Toko Kue', address: '', phone: '', invoicePrefix: 'INV',
+      storeName: 'ZS.Bakehouse', address: '', phone: '', invoicePrefix: 'INV',
       receiptFooter: 'Terima kasih!',
       paymentMethods: { Tunai: true, QRIS: true, Transfer: true, Debit: false, 'E-wallet': false },
       kasirList: [],

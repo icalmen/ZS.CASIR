@@ -1,4 +1,4 @@
-# zs.bakehouse kasir
+# Kasir Kue
 
 Aplikasi kasir sederhana untuk toko kue & minuman. Berjalan langsung di browser
 sebagai PWA (Progressive Web App), lalu bisa dibungkus jadi file APK Android
@@ -10,17 +10,16 @@ untuk semua shift, dan rutin unduh cadangan lewat menu Pengaturan.
 
 ## Setup Firebase (wajib sebelum login bisa dipakai)
 
-Aplikasi ini pakai Firebase Authentication supaya tombol **Daftar**, **Masuk**, dan **Masuk dengan Google** benar-benar berfungsi. Tanpa langkah ini, tombol-tombol tersebut akan menampilkan pesan "Firebase belum dikonfigurasi".
+Aplikasi ini pakai Firebase Authentication lewat **REST API langsung** (bukan file SDK besar dari gstatic.com), supaya tetap bisa jalan meskipun jaringan/perangkat kamu memblokir domain `gstatic.com` (ini cukup umum terjadi di beberapa jaringan). Konsekuensinya: fitur **"Masuk dengan Google" tidak tersedia** di versi ini — hanya Daftar/Masuk dengan email & password.
 
-1. Buka [console.firebase.google.com](https://console.firebase.google.com), masuk dengan akun Google kamu, klik **Add project** (gratis, tidak perlu kartu kredit untuk paket Spark).
+1. Buka [console.firebase.google.com](https://console.firebase.google.com), masuk dengan akun Google kamu, klik **Add project** (gratis).
 2. Di dashboard project, klik ikon web **`</>`** untuk mendaftarkan aplikasi web. Beri nama bebas, klik **Register app**.
-3. Firebase akan menampilkan kode `firebaseConfig` — salin semua nilainya.
-4. Buka file `js/firebase-config.js` di folder ini, ganti nilai-nilai `GANTI_DENGAN_...` dengan nilai yang kamu salin tadi.
-5. Di menu kiri Firebase Console: **Build → Authentication → Get started**. Di tab **Sign-in method**, aktifkan provider **Email/Password** dan **Google**.
-6. Masih di Authentication, buka tab **Settings → Authorized domains**, tambahkan domain GitHub Pages kamu (contoh: `namakamu.github.io`) supaya Google Sign-In diizinkan jalan di sana.
-7. Upload ulang file `js/firebase-config.js` yang sudah diisi ke GitHub (timpa file lama), lalu coba lagi.
+3. Firebase akan menampilkan kode `firebaseConfig` — kamu hanya perlu nilai **`apiKey`** saja.
+4. Buka file `js/firebase-config.js` di folder ini, ganti `GANTI_DENGAN_API_KEY_KAMU` dengan nilai apiKey yang kamu salin tadi.
+5. Di menu kiri Firebase Console: **Build → Authentication → Get started**. Di tab **Sign-in method**, aktifkan provider **Email/Password** saja (Google tidak perlu diaktifkan karena tidak dipakai versi ini).
+6. Upload ulang file `js/firebase-config.js` ke GitHub (timpa file lama), lalu coba lagi.
 
-Setelah ini, akun Firebase hanya berfungsi sebagai **gerbang masuk aplikasi** — data toko (produk, transaksi, laporan) tetap tersimpan lokal di HP tempat aplikasi dibuka, bukan disinkronkan ke cloud. Kalau nanti butuh data tersinkron ke banyak HP, itu perlu penambahan Firestore secara terpisah.
+Akun Firebase ini hanya berfungsi sebagai **gerbang masuk aplikasi**. Data toko (produk, transaksi, laporan) tetap tersimpan lokal di HP tempat aplikasi dibuka.
 
 ## Alur & navigasi
 

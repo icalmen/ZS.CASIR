@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Kasir Kue</title>
+<title>ZS.Bakehouse</title>
 <meta name="theme-color" content="#3F4650">
 <meta name="description" content="Aplikasi kasir untuk toko kue dan minuman">
 <link rel="manifest" href="manifest.json">
@@ -17,8 +17,8 @@
   <!-- ===== Splash (intro) ===== -->
   <section class="screen active" id="screen-splash">
     <div class="splash-wrap">
-      <div class="splash-logo">🧁</div>
-      <h1 class="splash-title">Kasir Kue</h1>
+      <img class="splash-logo-img" src="icons/icon-192.png" alt="ZS.Bakehouse">
+      <h1 class="splash-title">ZS.Bakehouse</h1>
       <p class="splash-tagline">Aplikasi kasir gratis untuk usaha kue &amp; minuman kamu</p>
       <button class="btn btn-primary" id="btnGoRegister" style="margin-top:32px;">Buat Akun</button>
       <button class="btn btn-secondary" id="btnGoSignin" style="margin-top:10px;">Masuk</button>
@@ -56,7 +56,7 @@
   <!-- ===== Setup toko (first run after auth) ===== -->
   <section class="screen" id="screen-storesetup">
     <div class="splash-wrap">
-      <div class="splash-logo small">🧁</div>
+      <img class="splash-logo-img small" src="icons/icon-192.png" alt="ZS.Bakehouse">
       <h1 class="splash-title" style="font-size:20px;">Satu langkah lagi</h1>
       <p class="splash-tagline">Siapa nama toko kamu?</p>
       <div class="field" style="margin-top:22px; text-align:left;">
@@ -71,7 +71,7 @@
   <!-- ===== Login / pilih kasir ===== -->
   <section class="screen" id="screen-login">
     <div class="splash-wrap">
-      <div class="splash-logo small">🧁</div>
+      <img class="splash-logo-img small" src="icons/icon-192.png" alt="ZS.Bakehouse">
       <h1 class="splash-title" id="loginStoreName" style="font-size:20px;">Toko Kue</h1>
       <p class="splash-tagline">Masuk untuk mulai shift kasir</p>
 
@@ -261,6 +261,8 @@
               <div class="stat-card"><div class="st-label">Produk terjual</div><div class="st-value" id="statQty">0</div></div>
               <div class="stat-card"><div class="st-label">Laba kotor</div><div class="st-value" id="statProfit">Rp0</div></div>
             </div>
+            <p class="section-title">Tren omzet</p>
+            <div class="chart-card" id="trendChart"></div>
             <button class="btn btn-secondary" id="btnExportCsv" style="margin-bottom:16px;">Ekspor CSV</button>
             <p class="section-title">Produk terlaris</p>
             <div id="topProducts"></div>
@@ -279,10 +281,12 @@
           </div>
 
           <div id="det-bycategory" class="det-page" style="display:none;">
+            <div class="chart-card" id="categoryChart"></div>
             <div id="byCategory"></div>
           </div>
 
           <div id="det-bypayment" class="det-page" style="display:none;">
+            <div class="chart-card" id="paymentChart"></div>
             <div id="byPayment"></div>
           </div>
 
@@ -467,6 +471,11 @@
         <p class="sheet-title" id="productFormTitle">Tambah produk</p>
         <input type="hidden" id="pfId">
         <div class="field"><label for="pfName">Nama produk</label><input type="text" id="pfName" placeholder="Contoh: Cheesecake slice"></div>
+        <div class="field">
+          <label for="pfImage">Foto produk (opsional)</label>
+          <input type="file" id="pfImage" accept="image/*">
+          <div id="pfImagePreview" style="margin-top:8px;"></div>
+        </div>
         <div class="field"><label for="pfSku">SKU (opsional)</label><input type="text" id="pfSku" placeholder="Contoh: CHS-01"></div>
         <div class="field"><label for="pfCategorySelect">Kategori</label><select id="pfCategorySelect"></select></div>
         <div class="field">

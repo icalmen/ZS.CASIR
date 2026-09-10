@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasirkue-v2';
+const CACHE_NAME = 'kasirkue-v3';
 const ASSETS = [
   './',
   './index.html',

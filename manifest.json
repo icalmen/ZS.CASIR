@@ -1,6 +1,6 @@
 {
-  "name": "Kasir Kue",
-  "short_name": "Kasir Kue",
+  "name": "ZS.Bakehouse",
+  "short_name": "ZS.Bakehouse",
   "description": "Aplikasi kasir untuk toko kue dan minuman",
   "start_url": "./index.html",
   "scope": "./",

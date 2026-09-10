@@ -19,7 +19,7 @@
    ========================================================================== */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDKhiKSei86v8v-IsnMVJoxCGeqoij0Otw",
+  apiKey: "GANTI_DENGAN_API_KEY_KAMU",
 };
 
 const firebaseReady = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('GANTI_DENGAN_');
